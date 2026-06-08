@@ -1,0 +1,72 @@
+Steps to Use the Indian Stock Swing Trading Assistant Project
+============================================================
+
+1. Prerequisites & Environment Setup
+-------------------------------------
+Verify your python version (Python 3.8.10 or higher) and configure a virtual environment:
+
+  # From the root directory of the project
+  python3 -m venv .venv
+  source .venv/bin/activate
+
+  # Install required dependencies
+  pip install -r requirements.txt
+
+
+2. Configure Environment Variables
+----------------------------------
+Create a `.env` file in the root directory and populate it with your environment parameters:
+
+  # Database configuration
+  MYSQL_HOST=localhost
+  MYSQL_PORT=3306
+  MYSQL_DATABASE=stock_bot
+  MYSQL_USER=root
+  MYSQL_PASSWORD=your-maria-db-password
+
+  # Integrations
+  TELEGRAM_BOT_TOKEN=your-telegram-bot-token
+  TELEGRAM_CHAT_ID=-100xxxxxxxxxx
+  GOOGLE_SHEET_ID=your-google-sheet-id
+  GEMINI_API_KEY=your-gemini-api-key
+
+  # Optional Configurations
+  LOG_LEVEL=INFO
+  INITIAL_CASH=100000.0
+
+
+3. Database Setup & Migrations
+------------------------------
+Ensure MariaDB is running locally or via Docker Compose, and apply migrations using Alembic:
+
+  # Apply Alembic schema migrations
+  PYTHONPATH=./src alembic upgrade head
+
+
+4. Running the Market Scanner
+-----------------------------
+To download daily stock data, evaluate swing criteria (RSI 55-70, Volume, 50DMA/200DMA filters), persist targets, and alert Telegram:
+
+  # By default, runs NIFTY50 index constituents (50 stocks)
+  bash scripts/run_scanner.sh
+
+  # Alternatively, run via CLI module directly
+  PYTHONPATH=./src .venv/bin/python -m stock_bot.scanner.cli
+
+  # To scan specific indexes (NIFTY50, NIFTY_BANK, NIFTY100, NIFTY_MIDCAP100):
+  SCAN_INDEX=NIFTY_BANK PYTHONPATH=./src .venv/bin/python -m stock_bot.scanner.cli
+  SCAN_INDEX=NIFTY100 PYTHONPATH=./src .venv/bin/python -m stock_bot.scanner.cli
+  SCAN_INDEX=NIFTY_MIDCAP100 PYTHONPATH=./src .venv/bin/python -m stock_bot.scanner.cli
+
+  # You can also run multiple indexes simultaneously (comma-separated):
+  SCAN_INDEX=NIFTY50,NIFTY_BANK PYTHONPATH=./src .venv/bin/python -m stock_bot.scanner.cli
+
+  # Diagnostic Test Mode (E2E Database & Telegram Alerts verify):
+  SAMPLE_SYMBOLS=TEST PYTHONPATH=./src .venv/bin/python -m stock_bot.scanner.cli
+
+
+5. Running Tests
+----------------
+To run the full suite of unit & integration tests and verify code coverage:
+
+  PYTHONPATH=src .venv/bin/python -m pytest --cov=src

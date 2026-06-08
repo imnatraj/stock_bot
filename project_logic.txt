@@ -1,0 +1,81 @@
+How the Indian Stock Swing Trading Assistant Works
+==================================================
+
+This document explains the core modules, filtering criteria, and mathematical
+logic implemented in this project to automate swing trading with a ₹1 Lakh capital.
+
+1. System Architecture Overview
+------------------------------
+The system runs as a pipeline containing three core layers:
+  a. Data Fetching & Processing (yfinance)
+  b. Quantitative Scanning & Filtering (scanner.py)
+  c. Relative Strength Ranking & Backfilling (engine.py)
+  d. Execution, Persistence & Alerting (portfolio_service.py, telegram.py)
+
+At a high level, the flow works like this:
+  User runs scanner -> Downloads stock list -> Computes indicators ->
+  Checks strict filters -> Ranks all stocks -> Selects Top 5 candidates ->
+  Saves to Database -> Dispatches Telegram alerts -> Trader executes.
+
+
+2. Indicator Computations
+-------------------------
+For each ticker, the system fetches 1 year of daily historical prices and calculates:
+- Close price (price)
+- Daily Volume (vol)
+- 50-day Simple Moving Average (50DMA):
+  50DMA = Mean of the close prices over the last 50 trading days.
+- 200-day Simple Moving Average (200DMA):
+  200DMA = Mean of the close prices over the last 200 trading days.
+- 20-day Average Volume (vol20):
+  vol20 = Mean of the volume over the last 20 trading days.
+- 14-day Relative Strength Index (RSI):
+  RSI = 100 - (100 / (1 + RS))
+  Where RS = Average Gain of up days / Average Loss of down days over 14 days.
+
+
+3. The Quantitative Strategy Criteria (Strict Filters)
+------------------------------------------------------
+A stock is strictly selected as a candidate only if it satisfies all of these conditions:
+  - Price is above 50DMA and 200DMA (indicates a long-term bullish uptrend).
+  - 14-day RSI is between 55.0 and 70.0 (indicates strong bullish momentum in the optimal zone).
+  - Today's Volume is at least 1.5 times the 20-day average volume (indicates a volume breakout).
+
+
+4. Selection & Ranking Fallback Engine
+--------------------------------------
+Because market conditions vary, strict filters might return 0 stocks. To ensure the user always has actionable trades, the system uses the Relative Strength Ranking Engine.
+
+If fewer than 5 stocks pass the strict filters, the remaining slots are backfilled using the top-ranked relative strength leaders calculated using a weighted scoring system:
+  - 30% Trend Strength: normalized 6-month returns.
+  - 25% Relative Strength: normalized 3-month returns.
+  - 25% Volume Strength: normalized 20-day average volume.
+  - 20% Sector Strength: normalized average return of all stocks in the same sector.
+
+The top 5 candidates overall (combining strict candidates and fallback candidates) are generated.
+
+
+5. Profit Target & Risk Management Logic
+----------------------------------------
+For each selected candidate, the entry price is the current closing price. The target and stop loss are calculated as:
+  - Buy Price = Entry Price (current price)
+  - Stop Loss (SL) = Buy Price * 0.97 (-3% risk limit)
+  - Target Price = Buy Price * 1.06 (+6% profit target)
+
+This represents a strict 2:1 Risk-to-Reward Ratio, allowing the strategy to compound profits even with a moderate win rate (e.g. 50%).
+
+
+6. Portfolio Ledger & Snapshot Logic
+------------------------------------
+- BUY orders deduct the cash balance (average price is updated based on total cost/quantity).
+- SELL orders add the cash balance, and realize the exact profit/loss:
+  Realized P&L = Quantity * (Sell Price - Average Buy Price)
+- Snapshot: Updates current prices of open positions, computes Unrealized P&L, calculates total valuation (Cash + Positions Value), and syncs the portfolio to your Google Sheet.
+
+
+7. Telegram Alerts & Event Routing
+----------------------------------
+Since Telegram's APIs are asynchronous and the rest of the application runs synchronously, the integration uses a thread-safe executor:
+- If a running event loop is detected, it runs the coroutine in a separate worker thread.
+- If no event loop is running, it completes the coroutine locally.
+- Retries with exponential backoff are applied to handle transient network issues or API rate limits.

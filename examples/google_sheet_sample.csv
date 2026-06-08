@@ -1,0 +1,6 @@
+symbol,score,buy_price,stop_loss,target_price,signal_date,notes
+RELIANCE.NS,85.50,2450.00,2350.00,2750.00,2026-06-07,"Strong trend, volume breakout"
+TCS.NS,78.20,3300.00,3150.00,3700.00,2026-06-05,"Consolidation; buy on breakout"
+HDFCBANK.NS,72.00,1650.00,1580.00,1850.00,2026-06-01,"Defensive pick, steady earnings"
+INFY.NS,68.00,1500.00,1420.00,1700.00,2026-05-28,"Watch RSI"
+ICICIBANK.NS,64.30,950.00,900.00,1100.00,2026-06-03,"High beta"

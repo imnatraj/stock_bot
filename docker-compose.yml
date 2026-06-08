@@ -1,0 +1,29 @@
+version: "3.8"
+services:
+  mariadb:
+    image: mariadb:10.7
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: example
+      MYSQL_DATABASE: stock_bot
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  app:
+    build: .
+    restart: unless-stopped
+    volumes:
+      - ./:/app:delegated
+    environment:
+      MYSQL_HOST: mariadb
+      MYSQL_PORT: "3306"
+      MYSQL_DATABASE: stock_bot
+      MYSQL_USER: root
+      MYSQL_PASSWORD: example
+    depends_on:
+      - mariadb
+
+volumes:
+  db_data:
